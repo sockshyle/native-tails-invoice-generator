@@ -39,7 +39,7 @@ button.d{background:transparent;color:#c33;border:1px solid #c33;padding:4px 8px
 #inv .note{margin-top:30px;font-size:11px;white-space:pre-line}
 #inv{position:relative}#inv .stamp{position:absolute;top:150px;right:70px;border:4px solid #2a9d4b;color:#2a9d4b;font:700 32px Arial,sans-serif;padding:4px 18px;border-radius:8px;transform:rotate(-12deg);opacity:.75;letter-spacing:3px}
 #logos{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}#logos button{width:78px;height:78px;padding:5px;margin:0;background:#d5d8e2;border:3px solid transparent;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#333;font-size:11px}#logos button.on{border-color:var(--ac)}#logos img{max-width:100%;max-height:100%}
-@media print{body{background:#fff}.form{display:none}.wrap{padding:0;display:block}.prev{overflow:visible}#inv{box-shadow:none;margin:0;width:100%}@page{margin:0}}
+@media print{#inv{zoom:1!important}body{background:#fff}.form{display:none}.wrap{padding:0;display:block}.prev{overflow:visible}#inv{box-shadow:none;margin:0;width:100%}@page{margin:0}}
 </style></head><body>
 <div class="wrap">
 <div class="form">
@@ -88,6 +88,8 @@ function drawItems(){
  <button class="d" onclick="items.splice(${i},1);drawItems();render()">Remove</button></div>`).join("");
 }
 function addItem(){items.push({n:"",s:"",q:1,p:0});drawItems();render()}
+function fit(){const i=$("inv"),w=i.parentElement.clientWidth;i.style.zoom=Math.min(1,(w-2)/794)||1}
+window.addEventListener("resize",fit);
 function render(){
  const paid=$("paid").checked,ttl=$("dt").value||"Invoice",pm=$("pm").value.trim().replace(/^upi$/i,"UPI");
  const net=items.reduce((a,i)=>a+(+i.q||0)*(+i.p||0),0),disc=+$("disc").value||0,del=+$("del").value||0,tot=net-disc+del;
@@ -104,18 +106,19 @@ function render(){
  <div class="l"><span>Total</span><span>${m(tot)}</span></div>${paid?`<div><span>Amount paid</span><span>${m(tot)}</span></div>`:""}<div class="b"><span>Balance due</span><span>${m(paid?0:tot)}</span></div></div>
  ${$("note").value?`<div class="note">${esc($("note").value)}</div>`:""}
  ${$("qr").checked?`<div style="margin-top:40px;display:flex;align-items:center;gap:12px"><img src="${QR}" style="width:84px;height:84px"><span style="font-size:11px">${esc($("qrt").value)}</span></div>`:""}`;
- st("nt_biz",$("biz").value);st("nt_no",$("no").value);
+ fit();st("nt_biz",$("biz").value);st("nt_no",$("no").value);
 }
 async function savePdf(){
  const b=$("pdfbtn"),old=b.textContent;b.textContent="Preparing…";
  try{
-  const c=await html2canvas($("inv"),{scale:2,backgroundColor:"#fff"});
+  const z=$("inv").style.zoom;$("inv").style.zoom="1";
+  const c=await html2canvas($("inv"),{scale:2,backgroundColor:"#fff"});$("inv").style.zoom=z;
   const pdf=new window.jspdf.jsPDF("p","mm","a4");
   let w=210,h=c.height*w/c.width;if(h>297){w=w*297/h;h=297}
   pdf.addImage(c.toDataURL("image/jpeg",.95),"JPEG",(210-w)/2,0,w,h);
   pdf.save("Native-Tails-"+($("dt").value||"Invoice")+"-"+($("no").value||"x").replace(/[^\w-]/g,"")+".pdf");
  }catch(e){alert("Could not create the PDF. Try the Print button.")}
- finally{b.textContent=old}
+ finally{fit();b.textContent=old}
 }
 const t=new Date(),d2=new Date(t.getTime()+30*864e5);
 $("iss").value=iso(t);$("due").value=iso(d2);
